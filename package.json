@@ -1,6 +1,6 @@
 {
   "name": "git-jira-shortcuts",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Git + Jira workflow shortcuts for zsh — interactive branch switching, auto-prefixed commits, Jira integration, and more.",
   "author": "chipallen2",
   "license": "MIT",

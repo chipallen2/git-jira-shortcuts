@@ -299,7 +299,7 @@ ghelp() { # ghelp | Show all git-jira-shortcuts commands
   gp                  Pull (no rebase, no editor)
 
 ── Merge & Diff ───────────────────────────────────────────────
-  gm [branch]         Merge into current branch — conflict check first
+  gm [branch]         Merge another branch INTO your current branch
     gmerge              (same)
   gdiff [branch]      Files changed vs target branch + GitHub compare link
 
@@ -312,7 +312,28 @@ ghelp() { # ghelp | Show all git-jira-shortcuts commands
   testJira / tj       Test your Jira API connection
   ghelp               This help screen
 
-Shortcuts: "m" → master, "d" → develop, ticket number → auto-resolves branch
+── Tips ───────────────────────────────────────────────────────
+  Ticket numbers:
+    Just type the number — no need to type the full branch name.
+    Example: gw 1234  →  switches to PROJ-1234-whatever-the-branch-is
+             gt 1234  →  creates a branch named from the Jira story title
+
+  Interactive picker:
+    Leave the branch empty on gw, gdel, or gm and you'll get an
+    arrow-key menu of your recent branches to pick from.
+
+  Merge workflow (gm):
+    Stay on YOUR branch, then tell it which branch to merge in.
+    It pulls latest on that branch first, then merges it into yours.
+    Example: (on feature branch) gm develop
+             → pulls latest develop → merges develop into your branch
+
+  Auto-prefixed commits:
+    On a ticket branch like PROJ-1234-fix-bug, your commit messages
+    are automatically prefixed:  gf "fixed it"  →  "PROJ-1234: fixed it"
+
+  Branch shorthand:
+    m → master    d → develop
 EOF
 }
 
