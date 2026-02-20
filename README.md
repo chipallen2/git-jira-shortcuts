@@ -18,7 +18,7 @@ Running `git-jira-shortcuts init` creates `~/.git-jira-shortcuts.env` with:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GJS_TICKET_PREFIX` | Yes | Jira project key (e.g. `MOTOMATE`, `PROJ`) |
+| `GJS_TICKET_PREFIX` | Yes | Jira project key (e.g. `MYPROJ`, `ACME`) |
 | `GJS_JIRA_DOMAIN` | Yes | Jira domain (e.g. `yourco.atlassian.net`) |
 | `GJS_JIRA_API_TOKEN` | Yes | Base64-encoded Jira API token |
 | `GJS_BRANCH_WEBHOOK_URL` | No | Optional webhook for branch name generation |

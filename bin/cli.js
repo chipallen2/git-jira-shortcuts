@@ -94,7 +94,7 @@ async function runInit() {
   try {
     const ticketPrefix = await ask(
       rl,
-      '  Jira project key (e.g. MOTOMATE, PROJ)',
+      '  Jira project key (e.g. MYPROJ, ACME)',
       existing.GJS_TICKET_PREFIX
     );
 

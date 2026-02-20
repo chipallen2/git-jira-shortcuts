@@ -3,7 +3,7 @@
 # https://github.com/chipallen2/git-jira-shortcuts
 #
 # Configuration (set in ~/.git-jira-shortcuts.env):
-#   GJS_TICKET_PREFIX      — Jira project key (e.g. MOTOMATE, PROJ)
+#   GJS_TICKET_PREFIX      — Jira project key (e.g. MYPROJ, ACME)
 #   GJS_JIRA_DOMAIN        — Jira domain (e.g. yourco.atlassian.net)
 #   GJS_JIRA_API_TOKEN     — Base64 Jira API token
 #   GJS_BRANCH_WEBHOOK_URL — Optional webhook for branch name generation
