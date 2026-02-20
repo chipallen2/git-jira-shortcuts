@@ -12,6 +12,35 @@
 # Store path to this script for self-reference (used by ghelp)
 GJS_SHELL_SCRIPT_PATH="${0:A}"
 
+# Current installed version (read from package.json next to this script)
+GJS_VERSION=$(node -p "require('$(dirname "$GJS_SHELL_SCRIPT_PATH")/../package.json').version" 2>/dev/null)
+
+# Background version check — runs once per day, never blocks the shell
+_gjs_version_cache="$HOME/.gjs-version-cache"
+(
+  # Skip if cache is less than 24 hours old
+  if [[ -f "$_gjs_version_cache" ]]; then
+    local cache_age=$(( $(date +%s) - $(stat -f%m "$_gjs_version_cache" 2>/dev/null || echo 0) ))
+    [[ $cache_age -lt 86400 ]] && exit 0
+  fi
+  # Fetch latest version from npm registry (silent, no error output)
+  local latest=$(curl -sf --max-time 3 "https://registry.npmjs.org/git-jira-shortcuts/latest" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4)
+  [[ -n "$latest" ]] && echo "$latest" > "$_gjs_version_cache"
+) &>/dev/null &!
+
+# Show upgrade notice if a newer version is available (reads local cache only — instant)
+_gjs_check_upgrade() {
+  [[ ! -f "$_gjs_version_cache" ]] && return
+  local latest=$(cat "$_gjs_version_cache" 2>/dev/null)
+  [[ -z "$latest" || "$latest" == "$GJS_VERSION" ]] && return
+  # Compare versions: if latest is different and greater, show notice
+  if [[ "$(printf '%s\n%s' "$GJS_VERSION" "$latest" | sort -V | tail -1)" == "$latest" && "$latest" != "$GJS_VERSION" ]]; then
+    echo "\033[33m⬆  git-jira-shortcuts $latest is available (you have $GJS_VERSION)\033[0m" >&2
+    echo "\033[33m   Run: npm install -g git-jira-shortcuts@$latest\033[0m" >&2
+    echo "" >&2
+  fi
+}
+
 ###
 ### INTERNAL HELPERS
 ###
@@ -273,6 +302,7 @@ grepos() { # grepos | Show all repo clones and their current branch
 alias repos='grepos' # grepos | Alias for grepos
 
 ghelp() { # ghelp | Show all git-jira-shortcuts commands
+  _gjs_check_upgrade
   cat >&2 <<'EOF'
 🧠 GIT-JIRA-SHORTCUTS
 
