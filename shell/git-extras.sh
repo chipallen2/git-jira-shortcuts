@@ -273,37 +273,47 @@ grepos() { # grepos | Show all repo clones and their current branch
 alias repos='grepos' # grepos | Alias for grepos
 
 ghelp() { # ghelp | Show all git-jira-shortcuts commands
-  echo "🧠 GIT-JIRA-SHORTCUTS:"
-  echo "[arg] = Required  [*arg] = Optional  [arg=default] = Optional with default"
-  echo
-  local -a entries=()
-  grep -E "^(alias .*# |[a-zA-Z_]+\(\) \{ # )" "$GJS_SHELL_SCRIPT_PATH" | while IFS= read -r line; do
-    if [[ "$line" == alias* ]]; then
-      name=$(echo "$line" | sed 's/alias \([^=]*\)=.*/\1/')
-      comment=$(echo "$line" | sed 's/.*# \(.*\)/\1/')
-      entries+=("$name|$comment")
-    else
-      name=$(echo "$line" | sed 's/\([a-zA-Z_]*\)().*/\1/')
-      comment=$(echo "$line" | sed 's/.*# \(.*\)/\1/')
-      entries+=("$name|$comment")
-    fi
-  done
-  local max_name_len=0
-  local max_cmd_len=0
-  for entry in "${entries[@]}"; do
-    name="${entry%%|*}"
-    rest="${entry#*|}"
-    cmd="${rest%%|*}"
-    (( ${#name} > max_name_len )) && max_name_len=${#name}
-    (( ${#cmd} > max_cmd_len )) && max_cmd_len=${#cmd}
-  done
-  for entry in "${entries[@]}"; do
-    name="${entry%%|*}"
-    rest="${entry#*|}"
-    cmd="${rest%%|*}"
-    desc="${rest#*|}"
-    printf "%-*s | %-*s | %s\n" "$max_name_len" "$name" "$max_cmd_len" "$cmd" "$desc"
-  done | sort
+  cat >&2 <<'EOF'
+🧠 GIT-JIRA-SHORTCUTS
+
+── Status ─────────────────────────────────────────────────────
+  gs                  Quick git status — branch, sync info, pending files
+  gl / glist          List all pending files (staged, unstaged, untracked)
+  grecent             Show last 10 branches you checked out
+
+── Branching ──────────────────────────────────────────────────
+  gw [branch]         Switch branches — arrow-key picker if no branch given
+    gswitch             (same, also accepts --force / -f)
+  gt <branch|ticket#> Create or switch to a branch — auto-names from Jira
+    gstart, gcreate     (same)
+  gdel [branch]       Delete a branch — interactive picker, safety checks
+    gdelete             (same)
+
+── Committing & Pushing ───────────────────────────────────────
+  gf <message>        Stage all → commit (skip hooks) → push
+    gcfast              (same)  Auto-prefixes ticket ID from branch name.
+  gc <message>        Stage all → commit (with hooks) → push
+    gcommit             (same)  Auto-prefixes ticket ID from branch name.
+  gpu [branch]        Push current branch with upstream tracking
+    gpush               (same)
+  gp                  Pull (no rebase, no editor)
+
+── Merge & Diff ───────────────────────────────────────────────
+  gm [branch]         Merge into current branch — conflict check first
+    gmerge              (same)
+  gdiff [branch]      Files changed vs target branch + GitHub compare link
+
+── File Operations ────────────────────────────────────────────
+  gr [file]           Reset a file with confirmation — picker if no file
+    greset              (same)
+
+── Utilities ──────────────────────────────────────────────────
+  grepos / repos      Show all repo clones and their current branch
+  testJira / tj       Test your Jira API connection
+  ghelp               This help screen
+
+Shortcuts: "m" → master, "d" → develop, ticket number → auto-resolves branch
+EOF
 }
 
 gdiff() { # gdiff [*branch=m] | List files changed for PR to target branch + GitHub compare link
