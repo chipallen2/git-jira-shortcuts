@@ -106,9 +106,10 @@ async function runInit() {
 
     console.log('');
     console.log('  To generate a Jira API token:');
-    console.log('    1. Go to https://id.atlassian.com/manage-profile/security/api-tokens');
-    console.log('    2. Create a token');
-    console.log('    3. Base64-encode it: echo -n "email:token" | base64');
+    console.log('    1. Go to https://id.atlassian.com/manage-profile/security');
+    console.log('    2. Click "Create and manage API tokens"');
+    console.log('    3. Create a token, set Expires On to next year (1 year max)');
+    console.log('    4. Base64-encode it: echo -n "email:token" | base64');
     console.log('');
 
     const jiraToken = await ask(
