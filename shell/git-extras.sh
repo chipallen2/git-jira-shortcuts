@@ -953,7 +953,6 @@ alias tj='testJira' # testJira | Test Jira API connection
 
 gclean() { # gclean [--dry-run] | Delete local branches already merged to master (skips recent)
   local dry_run=0
-  local days_recent=7
   
   for arg in "$@"; do
     case "$arg" in
@@ -962,6 +961,17 @@ gclean() { # gclean [--dry-run] | Delete local branches already merged to master
         ;;
     esac
   done
+
+  if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    echo "❌ Not a git repository."
+    return 1
+  fi
+
+  # Safety: refresh remote refs first so merge checks are based on current origin state.
+  if ! git fetch --quiet origin --prune 2>/dev/null; then
+    echo "❌ Could not fetch origin. Aborting to avoid deleting against stale refs."
+    return 1
+  fi
   
   # Default protected branches
   local -a protected=("master" "main" "develop" "development")
@@ -1020,12 +1030,7 @@ gclean() { # gclean [--dry-run] | Delete local branches already merged to master
   local deleted=0
   local skipped_protected=0
   local skipped_recent=0
-  
-  # Build grep pattern for protected branches
-  local grep_pattern="^\s*\*"
-  for p in "${protected[@]}"; do
-    grep_pattern="$grep_pattern|^\s*$p\$"
-  done
+  local skipped_not_merged=0
   
   while IFS= read -r branch; do
     branch=$(echo "$branch" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -1058,6 +1063,13 @@ gclean() { # gclean [--dry-run] | Delete local branches already merged to master
       [[ $dry_run -eq 1 ]] && echo "  ⏭️  Skip (recent): $branch"
       continue
     fi
+
+    # Extra safety: branch tip must still be an ancestor of merge target right before delete.
+    if ! git merge-base --is-ancestor "$branch" "$merge_target" 2>/dev/null; then
+      ((skipped_not_merged++))
+      [[ $dry_run -eq 1 ]] && echo "  ⏭️  Skip (not merged): $branch"
+      continue
+    fi
     
     # Delete the branch
     if [[ $dry_run -eq 1 ]]; then
@@ -1076,6 +1088,8 @@ gclean() { # gclean [--dry-run] | Delete local branches already merged to master
   else
     echo "✅ Deleted $deleted branch(es)."
   fi
+  [[ $skipped_protected -gt 0 ]] && echo "   Skipped $skipped_protected protected branch(es)."
   [[ $skipped_recent -gt 0 ]] && echo "   Skipped $skipped_recent recent branch(es)."
+  [[ $skipped_not_merged -gt 0 ]] && echo "   Skipped $skipped_not_merged not-merged branch(es)."
 }
 alias gc_clean='gclean' # gclean | Alias for gclean
