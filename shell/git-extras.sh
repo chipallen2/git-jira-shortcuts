@@ -448,18 +448,16 @@ greset() { # greset [*file] | Reset a specific file with confirmation (interacti
       return 0
     fi
     
-    echo "Select a file to reset:"
-    echo "  1) ALL (reset all files)"
-    local i=2
-    for f in "${files[@]}"; do
-      echo "  $i) $f"
-      ((i++))
-    done
+    local options=("ALL (reset all files)" "${files[@]}")
     
-    echo -n "Enter number: "
-    read choice
+    echo "Select a file to reset (↑/↓ select, Enter confirm, q cancel):"
+    local picked
+    if ! picked=$(_gjs_interactive_menu "${options[@]}"); then
+      echo "Cancelled."
+      return 1
+    fi
     
-    if [[ "$choice" == "1" ]]; then
+    if [[ "$picked" == "ALL (reset all files)" ]]; then
       echo "Are you sure you want to reset ALL files? (Y/N)"
       read -k user_input
       echo
@@ -473,12 +471,7 @@ greset() { # greset [*file] | Reset a specific file with confirmation (interacti
       return 0
     fi
     
-    local idx=$((choice - 1))
-    if [[ $idx -lt 1 || $idx -gt ${#files[@]} ]]; then
-      echo "❌ Invalid selection"
-      return 1
-    fi
-    file="${files[$idx]}"
+    file="$picked"
   fi
   
   echo "Are you sure you want to reset $file? (Y/N)"
