@@ -172,7 +172,7 @@ After init, these zsh commands are available:
   gpu/gpush Push with tracking        gdel/gdelete Delete branch
   gl/glist  List pending files        gr/greset    Reset files
   gdiff     Diff vs target branch     grecent      Recent branches
-  grepos    Show all repo branches    testJira     Test Jira API
+  grepos    Show all repo branches    gclean       Delete merged branches
   ghelp     Show all commands
 `);
 }

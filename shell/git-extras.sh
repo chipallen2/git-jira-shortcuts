@@ -8,6 +8,8 @@
 #   GJS_JIRA_API_TOKEN     — Base64 Jira API token
 #   GJS_BRANCH_WEBHOOK_URL — Optional webhook for branch name generation
 #   GJS_REPOS              — Optional array of repo paths for grepos
+#   GJS_CLEAN_PROTECTED    — Optional array of branch names to never delete with gclean
+#   GJS_BRANCH_ALIASES     — Optional array of branch aliases (e.g. "m:master" "d:develop")
 
 # Store path to this script for self-reference (used by ghelp)
 GJS_SHELL_SCRIPT_PATH="${0:A}"
@@ -129,12 +131,31 @@ _gjs_resolve_branch_input() {
     return 0
   fi
 
-  if [[ "$raw_input" == "m" ]]; then
-    echo "master"
+  # Check configurable aliases first, fall back to defaults
+  local resolved_alias=""
+  if [[ -n "${GJS_BRANCH_ALIASES+x}" ]]; then
+    for alias_entry in "${GJS_BRANCH_ALIASES[@]}"; do
+      local alias_key="${alias_entry%%:*}"
+      local alias_val="${alias_entry#*:}"
+      if [[ "$raw_input" == "$alias_key" ]]; then
+        resolved_alias="$alias_val"
+        break
+      fi
+    done
+  fi
+  if [[ -n "$resolved_alias" ]]; then
+    echo "$resolved_alias"
     return 0
-  elif [[ "$raw_input" == "d" ]]; then
-    echo "develop"
-    return 0
+  fi
+  # Default aliases if GJS_BRANCH_ALIASES not set
+  if [[ -z "${GJS_BRANCH_ALIASES+x}" ]]; then
+    if [[ "$raw_input" == "m" ]]; then
+      echo "master"
+      return 0
+    elif [[ "$raw_input" == "d" ]]; then
+      echo "develop"
+      return 0
+    fi
   fi
 
   if ! _gjs_is_ticket_number "$raw_input"; then
@@ -337,6 +358,11 @@ ghelp() { # ghelp | Show all git-jira-shortcuts commands
   gr [file]           Reset a file with confirmation — picker if no file
     greset              (same)
 
+── Cleanup ────────────────────────────────────────────────────
+  gclean              Delete local branches already merged to master
+                      Skips: recent branches, master, develop, protected
+                      Use --dry-run to preview without deleting
+
 ── Utilities ──────────────────────────────────────────────────
   grepos / repos      Show all repo clones and their current branch
   testJira / tj       Test your Jira API connection
@@ -364,6 +390,12 @@ ghelp() { # ghelp | Show all git-jira-shortcuts commands
 
   Branch shorthand:
     m → master    d → develop
+    Customize in ~/.git-jira-shortcuts.env:
+      GJS_BRANCH_ALIASES=("m:main" "d:dev" "s:staging")
+
+  gclean config:
+    Protect additional branches:
+      GJS_CLEAN_PROTECTED=("release" "hotfix" "staging")
 EOF
 }
 
@@ -918,3 +950,132 @@ testJira() { # testJira | Test Jira API connection
   return 0
 }
 alias tj='testJira' # testJira | Test Jira API connection
+
+gclean() { # gclean [--dry-run] | Delete local branches already merged to master (skips recent)
+  local dry_run=0
+  local days_recent=7
+  
+  for arg in "$@"; do
+    case "$arg" in
+      --dry-run|-n)
+        dry_run=1
+        ;;
+    esac
+  done
+  
+  # Default protected branches
+  local -a protected=("master" "main" "develop" "development")
+  
+  # Add user-configured protected branches
+  if [[ -n "${GJS_CLEAN_PROTECTED+x}" ]]; then
+    for branch in "${GJS_CLEAN_PROTECTED[@]}"; do
+      protected+=("$branch")
+    done
+  fi
+  
+  # Also add alias targets to protected list (custom or default)
+  if [[ -n "${GJS_BRANCH_ALIASES+x}" ]]; then
+    for alias_entry in "${GJS_BRANCH_ALIASES[@]}"; do
+      local alias_val="${alias_entry#*:}"
+      protected+=("$alias_val")
+    done
+  else
+    # Default alias targets (m→master, d→develop) — same fallback as _gjs_resolve_branch_input
+    protected+=("master" "develop")
+  fi
+  
+  # Get recent branches (worked on in last N days)
+  local -a recent_branches=()
+  while IFS= read -r entry; do
+    [[ -z "$entry" ]] && continue
+    recent_branches+=("$entry")
+  done < <(git for-each-ref --sort=-committerdate --format='%(refname:short)' refs/heads/ | head -10)
+  
+  # Also get branches from reflog (recently checked out)
+  while IFS= read -r branch; do
+    [[ -z "$branch" ]] && continue
+    if [[ -z "${recent_branches[(r)$branch]}" ]]; then
+      recent_branches+=("$branch")
+    fi
+  done < <(_gjs_get_recent_branches 2>/dev/null)
+  
+  # Determine which branch to check merges against
+  local merge_target=""
+  for candidate in master main; do
+    if git show-ref --verify --quiet "refs/remotes/origin/$candidate" 2>/dev/null; then
+      merge_target="origin/$candidate"
+      break
+    fi
+  done
+  
+  if [[ -z "$merge_target" ]]; then
+    echo "❌ Could not find master or main branch on origin."
+    return 1
+  fi
+  
+  echo "🧹 Cleaning up branches merged into ${merge_target#origin/}..."
+  [[ $dry_run -eq 1 ]] && echo "   (dry-run mode — no branches will be deleted)"
+  echo ""
+  
+  local deleted=0
+  local skipped_protected=0
+  local skipped_recent=0
+  
+  # Build grep pattern for protected branches
+  local grep_pattern="^\s*\*"
+  for p in "${protected[@]}"; do
+    grep_pattern="$grep_pattern|^\s*$p\$"
+  done
+  
+  while IFS= read -r branch; do
+    branch=$(echo "$branch" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    [[ -z "$branch" ]] && continue
+    [[ "$branch" == \** ]] && continue
+    
+    # Skip protected branches
+    local is_protected=0
+    for p in "${protected[@]}"; do
+      if [[ "$branch" == "$p" ]]; then
+        is_protected=1
+        break
+      fi
+    done
+    if [[ $is_protected -eq 1 ]]; then
+      ((skipped_protected++))
+      continue
+    fi
+    
+    # Skip recently worked branches
+    local is_recent=0
+    for r in "${recent_branches[@]}"; do
+      if [[ "$branch" == "$r" ]]; then
+        is_recent=1
+        break
+      fi
+    done
+    if [[ $is_recent -eq 1 ]]; then
+      ((skipped_recent++))
+      [[ $dry_run -eq 1 ]] && echo "  ⏭️  Skip (recent): $branch"
+      continue
+    fi
+    
+    # Delete the branch
+    if [[ $dry_run -eq 1 ]]; then
+      echo "  🗑️  Would delete: $branch"
+    else
+      if git branch -d "$branch" 2>/dev/null; then
+        echo "  🗑️  Deleted: $branch"
+        ((deleted++))
+      fi
+    fi
+  done < <(git branch --merged "$merge_target" 2>/dev/null)
+  
+  echo ""
+  if [[ $dry_run -eq 1 ]]; then
+    echo "Dry run complete. Use 'gclean' without --dry-run to delete."
+  else
+    echo "✅ Deleted $deleted branch(es)."
+  fi
+  [[ $skipped_recent -gt 0 ]] && echo "   Skipped $skipped_recent recent branch(es)."
+}
+alias gc_clean='gclean' # gclean | Alias for gclean
