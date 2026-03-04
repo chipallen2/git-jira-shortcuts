@@ -441,6 +441,7 @@ gdiff() { # gdiff [*branch=m] | List files changed for PR to target branch + Git
   fi
 }
 
+unalias gpr 2>/dev/null
 gpr() { # gpr [*branch=m] | Open GitHub compare URL from current branch to target branch
   local target_input="${1:-m}"
   local target
