@@ -353,6 +353,7 @@ ghelp() { # ghelp | Show all git-jira-shortcuts commands
   gm [branch]         Merge another branch INTO your current branch
     gmerge              (same)
   gdiff [branch]      Files changed vs target branch + GitHub compare link
+  gpr [branch]        Open GitHub compare URL (current branch → target)
 
 ── File Operations ────────────────────────────────────────────
   gr [file]           Reset a file with confirmation — picker if no file
@@ -438,6 +439,39 @@ gdiff() { # gdiff [*branch=m] | List files changed for PR to target branch + Git
       echo "https://github.com/${repo_path}/compare/${target}...${current_branch}?expand=1"
     fi
   fi
+}
+
+gpr() { # gpr [*branch=m] | Open GitHub compare URL from current branch to target branch
+  local target_input="${1:-m}"
+  local target
+  if ! target=$(_gjs_resolve_branch_input "$target_input" "any"); then
+    return 1
+  fi
+
+  local current_branch=$(git rev-parse --abbrev-ref HEAD)
+  local remote_url=$(git remote get-url origin 2>/dev/null)
+
+  if [[ -z "$remote_url" ]]; then
+    echo "❌ No remote 'origin' found."
+    return 1
+  fi
+
+  local repo_path
+  if [[ "$remote_url" == git@github.com:* ]]; then
+    repo_path="${remote_url#git@github.com:}"
+  elif [[ "$remote_url" == https://github.com/* ]]; then
+    repo_path="${remote_url#https://github.com/}"
+  fi
+  repo_path="${repo_path%.git}"
+
+  if [[ -z "$repo_path" ]]; then
+    echo "❌ Could not determine GitHub repo from remote URL: $remote_url"
+    return 1
+  fi
+
+  local url="https://github.com/${repo_path}/compare/${target}...${current_branch}?expand=1"
+  echo "$url"
+  open "$url" 2>/dev/null || xdg-open "$url" 2>/dev/null || echo "Open the URL above in your browser."
 }
 
 glist() { # glist | List files pending in this branch

@@ -79,6 +79,7 @@ Running `git-jira-shortcuts init` creates `~/.git-jira-shortcuts.env` with:
 |---------|-------|-------------|
 | `greset [file]` | `gr` | Reset a file with confirmation (interactive if no file given) |
 | `gdiff [branch]` | — | List files changed vs target branch + GitHub compare link |
+| `gpr [branch]` | — | Open GitHub compare URL (current branch → target) |
 | `testJira` | `tj` | Test Jira API connection |
 
 ## Features
