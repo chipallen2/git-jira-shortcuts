@@ -986,6 +986,7 @@ testJira() { # testJira | Test Jira API connection
 }
 alias tj='testJira' # testJira | Test Jira API connection
 
+unalias gclean 2>/dev/null
 gclean() { # gclean [--dry-run] | Delete local branches already merged to master (skips recent)
   local dry_run=0
   
