@@ -2,7 +2,7 @@
 # git-jira-shortcuts — Git + Jira workflow shortcuts for zsh
 # https://github.com/chipallen2/git-jira-shortcuts
 #
-# Configuration (set in ~/.git-jira-shortcuts.env):
+# Global configuration (set in ~/.git-jira-shortcuts.env):
 #   GJS_TICKET_PREFIX      — Jira project key (e.g. MYPROJ, ACME)
 #   GJS_JIRA_DOMAIN        — Jira domain (e.g. yourco.atlassian.net)
 #   GJS_JIRA_API_TOKEN     — Base64 Jira API token
@@ -10,6 +10,10 @@
 #   GJS_REPOS              — Optional array of repo paths for grepos
 #   GJS_CLEAN_PROTECTED    — Optional array of branch names to never delete with gclean
 #   GJS_BRANCH_ALIASES     — Optional array of branch aliases (e.g. "m:master" "d:develop")
+#
+# Per-repo overrides (set in <repo-root>/.git-jira-shortcuts):
+#   Same variables as above — auto-loaded on cd, reset to global on leave.
+#   Example: GJS_BRANCH_ALIASES=("m:main" "d:develop")
 
 # Store path to this script for self-reference (used by ghelp)
 GJS_SHELL_SCRIPT_PATH="${0:A}"
@@ -42,6 +46,45 @@ _gjs_check_upgrade() {
     echo "" >&2
   fi
 }
+
+###
+### PER-REPO CONFIG
+###
+
+# Snapshot global values (from ~/.git-jira-shortcuts.env) so they can be
+# restored when leaving a repo that has local overrides.
+_GJS_GLOBAL_TICKET_PREFIX="${GJS_TICKET_PREFIX:-}"
+_GJS_GLOBAL_BRANCH_WEBHOOK_URL="${GJS_BRANCH_WEBHOOK_URL:-}"
+if [[ -n "${GJS_BRANCH_ALIASES+x}" ]]; then
+  _GJS_GLOBAL_BRANCH_ALIASES=("${GJS_BRANCH_ALIASES[@]}")
+  _GJS_GLOBAL_BRANCH_ALIASES_ISSET=1
+else
+  _GJS_GLOBAL_BRANCH_ALIASES=()
+  _GJS_GLOBAL_BRANCH_ALIASES_ISSET=0
+fi
+
+# Load .git-jira-shortcuts from the current repo root (if present),
+# overriding global values. Resets to globals first so leaving a repo
+# with local overrides cleanly reverts to the machine-wide config.
+_gjs_apply_repo_config() {
+  GJS_TICKET_PREFIX="$_GJS_GLOBAL_TICKET_PREFIX"
+  GJS_BRANCH_WEBHOOK_URL="$_GJS_GLOBAL_BRANCH_WEBHOOK_URL"
+  if [[ "$_GJS_GLOBAL_BRANCH_ALIASES_ISSET" -eq 1 ]]; then
+    GJS_BRANCH_ALIASES=("${_GJS_GLOBAL_BRANCH_ALIASES[@]}")
+  else
+    unset GJS_BRANCH_ALIASES
+  fi
+
+  local git_root
+  git_root=$(git rev-parse --show-toplevel 2>/dev/null) || return 0
+  local rc_file="$git_root/.git-jira-shortcuts"
+  [[ -f "$rc_file" ]] && source "$rc_file"
+}
+
+# Auto-apply on directory change and immediately for the current directory.
+autoload -U add-zsh-hook 2>/dev/null
+add-zsh-hook chpwd _gjs_apply_repo_config
+_gjs_apply_repo_config
 
 ###
 ### INTERNAL HELPERS

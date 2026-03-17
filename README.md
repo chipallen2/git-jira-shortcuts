@@ -26,7 +26,7 @@ The `init` command will walk you through configuration and add the necessary sou
 
 ## Configuration
 
-Running `git-jira-shortcuts init` creates `~/.git-jira-shortcuts.env` with:
+Running `git-jira-shortcuts init` creates `~/.git-jira-shortcuts.env` with your machine-wide settings:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -34,6 +34,26 @@ Running `git-jira-shortcuts init` creates `~/.git-jira-shortcuts.env` with:
 | `GJS_JIRA_DOMAIN` | Yes | Jira domain (e.g. `yourco.atlassian.net`) |
 | `GJS_JIRA_API_TOKEN` | Yes | Base64-encoded Jira API token |
 | `GJS_BRANCH_WEBHOOK_URL` | No | Optional webhook for branch name generation |
+| `GJS_BRANCH_ALIASES` | No | Override `m`/`d` shorthand (e.g. `("m:main" "d:develop")`) |
+
+### Per-repo config
+
+Different repos can use different branch names (e.g. `main` vs `master`). Add a `.git-jira-shortcuts` file to any repo root to override your global settings for that repo:
+
+```bash
+# my-repo/.git-jira-shortcuts
+GJS_BRANCH_ALIASES=("m:main" "d:develop")
+GJS_TICKET_PREFIX=OTHERPROJ
+```
+
+The file is sourced automatically when you `cd` into the repo, and your global settings are restored when you leave. Any `GJS_*` variable can be overridden this way.
+
+You'll probably want to add this to your global gitignore so it doesn't get committed:
+
+```bash
+echo ".git-jira-shortcuts" >> ~/.gitignore_global
+git config --global core.excludesfile ~/.gitignore_global
+```
 
 ### Generating your Jira API token
 
@@ -108,8 +128,23 @@ gc fix the bug   # Commits as "PROJ-1234: fix the bug"
 ```
 
 ### Branch shorthand
+By default:
 - `m` → `master`
 - `d` → `develop`
+
+To customize these (e.g. if your repo uses `main` instead of `master`), set `GJS_BRANCH_ALIASES` in `~/.git-jira-shortcuts.env`:
+
+```bash
+GJS_BRANCH_ALIASES=("m:main" "d:develop")
+```
+
+You can add as many aliases as you want:
+
+```bash
+GJS_BRANCH_ALIASES=("m:main" "d:dev" "s:staging")
+```
+
+When `GJS_BRANCH_ALIASES` is set, the defaults are replaced entirely — so include all the aliases you want.
 
 ## Update
 
