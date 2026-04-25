@@ -81,7 +81,7 @@ git config --global core.excludesfile ~/.gitignore_global
 ### Branching
 | Command | Alias | Description |
 |---------|-------|-------------|
-| `gswitch [branch]` | `gw` | Switch branches with interactive picker (↑/↓ arrows) |
+| `gswitch [branch] [--force]` | `gw` | Switch branches with interactive picker (↑/↓). `--force` skips uncommitted and unpushed guards. |
 | `gstart <branch\|ticket#>` | `gt`, `gcreate` | Create or switch to branch, auto-names from Jira |
 | `gdelete [branch]` | `gdel` | Delete feature branch if clean and pushed |
 | `gmerge [branch]` | `gm` | Merge branch into current if no conflicts |

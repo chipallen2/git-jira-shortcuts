@@ -377,7 +377,7 @@ ghelp() { # ghelp | Show all git-jira-shortcuts commands
 
 ── Branching ──────────────────────────────────────────────────
   gw [branch]         Switch branches — arrow-key picker if no branch given
-    gswitch             (same, also accepts --force / -f)
+    gswitch             (same, also accepts --force / -f to skip dirty or unpushed guards)
   gt <branch|ticket#> Create or switch to a branch — auto-names from Jira
     gstart, gcreate     (same)
   gdel [branch]       Delete a branch — interactive picker, safety checks
@@ -596,7 +596,7 @@ greset() { # greset [*file] | Reset a specific file with confirmation (interacti
 }
 alias gr='greset' # greset [*file] | Alias for greset
 
-gswitch() { # gswitch [*branch] [--force|-f] | Switch branches (optionally bypass local-dirty guard)
+gswitch() { # gswitch [*branch] [--force|-f] | Switch branches (bypass dirty tree / unpushed guards with --force)
   local force_switch=0
   local -a positional=()
   local arg
@@ -623,8 +623,9 @@ gswitch() { # gswitch [*branch] [--force|-f] | Switch branches (optionally bypas
   local unpushed
   unpushed=$(git log origin/"$branch"..HEAD --oneline 2>/dev/null)
 
-  if [[ -n "$unpushed" ]]; then
+  if [[ $force_switch -eq 0 && -n "$unpushed" ]]; then
     echo "🚫 You have commits on '$branch' not pushed to origin. Push them first."
+    echo "   Use 'gw --force [branch]' to switch anyway."
     return 1
   fi
 
