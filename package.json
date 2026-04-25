@@ -11,6 +11,9 @@
   "bin": {
     "git-jira-shortcuts": "./bin/cli.js"
   },
+  "scripts": {
+    "postinstall": "node ./bin/postinstall.js"
+  },
   "files": [
     "bin/",
     "shell/",

@@ -152,6 +152,12 @@ When `GJS_BRANCH_ALIASES` is set, the defaults are replaced entirely — so incl
 npm update -g git-jira-shortcuts
 ```
 
+After upgrading, open a new terminal session or reload your current shell:
+
+```bash
+source ~/.zshrc
+```
+
 ## Reconfigure
 
 ```bash
